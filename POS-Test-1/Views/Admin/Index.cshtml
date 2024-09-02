@@ -1,0 +1,36 @@
+﻿@model IEnumerable<POS_Test_1.ViewModels.RoleViewModel>
+
+@{
+    ViewData["Title"] = "Role Management";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<p>
+    <a asp-controller="Admin" asp-action="CreateRole" class="btn btn-primary">Create New Role</a>
+</p>
+
+<table class="table">
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Name</th>
+            <th>Description</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var role in Model)
+        {
+            <tr>
+                <td>@role.Id</td>
+                <td>@role.Name</td>
+                <td>@role.Description</td>
+                <td>
+                    <a asp-controller="Admin" asp-action="EditRole" asp-route-id="@role.Id" class="btn btn-warning">Edit</a>
+                    <a asp-controller="Admin" asp-action="DeleteRole" asp-route-id="@role.Id" class="btn btn-danger">Delete</a>
+                </td>
+            </tr>
+        }
+    </tbody>
+</table>

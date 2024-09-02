@@ -1,0 +1,670 @@
+﻿/MyWebApp
+│
+├── /Controllers
+│   ├── AccountController.cs
+│   ├── AdminController.cs
+│   └── ApiController.cs
+│
+├── /Models
+│   ├── User.cs
+│   ├── Role.cs
+│   ├── Admin.cs
+│   ├── Token.cs
+│   └── LoginHistory.cs
+│
+├── /Data
+│   ├── ApplicationDbContext.cs
+│   └── MySQLDbInitializer.cs
+│
+├── /Interfaces
+│   ├── IAccountService.cs
+│   ├── IAdminService.cs
+    |__ IAdminRepository.cs
+│   └── IUserRepository.cs
+    ├── IEmailService.cs
+│   ├── IRoleRepository.cs
+│   └── ITokenRepository.cs
+    
+│
+├── /Services
+│   ├── AccountService.cs
+│   ├── AdminService.cs
+│   ├── EmailService.cs
+│   ├── TokenService.cs
+│   └── PasswordHasherService.cs
+│
+├── /Repositories
+│   ├── UserRepository.cs
+│   ├── RoleRepository.cs
+│   ├── AdminRepository.cs
+│   └── TokenRepository.cs
+│
+├── /Migrations
+│   └── [Generated Migration Files]
+│
+├── /Helpers
+│   ├── JwtHelper.cs
+│   ├── PasswordHelper.cs
+│   └── ValidationHelper.cs
+│
+├── /DTOs
+│   ├── UserDto.cs
+│   ├── LoginDto.cs
+│   ├── RegisterDto.cs
+│   ├── RoleDto.cs
+│   ├── TokenDto.cs
+│   └── AdminDto.cs
+    └── ChangePasswordDto.cs
+│   ├── ForgotPasswordDto.cs
+│   └── ResetPasswordDto.cs
+│
+├── /ViewModels
+│   ├── RegisterViewModel.cs
+│   ├── LoginViewModel.cs
+│   └── UserRolesViewModel.cs
+│
+├── /Middlewares
+│   ├── JwtMiddleware.cs
+│   ├── ExceptionMiddleware.cs
+│   └── RoleAuthorizationMiddleware.cs
+│
+├── /Configurations
+│   ├── JwtConfig.cs
+│   └── EmailConfig.cs
+│
+├── /Views
+│   ├── /Account
+│   │   ├── Login.cshtml
+│   │   ├── Register.cshtml
+│   │   ├── ForgotPassword.cshtml
+│   │   └── ResetPassword.cshtml
+│   │
+│   ├── /Admin
+│   │   ├── Index.cshtml
+│   │   ├── ManageUsers.cshtml
+│   │   └── EditRole.cshtml
+│   │
+│   └── Shared
+│       ├── _Layout.cshtml
+│       ├── _LoginPartial.cshtml
+│       └── _ValidationScriptsPartial.cshtml
+│
+├── /wwwroot
+│   ├── css/
+│   ├── js/
+│   └── images/
+│
+├── /Properties
+│   └── launchSettings.json
+│
+├── appsettings.json
+├── appsettings.Development.json
+├── Program.cs
+so far the code we have done is 
+ApplicationDbContext.cs
+using Microsoft.EntityFrameworkCore;
+using POS_Test_1.Models;
+
+namespace POS_Test_1.Data
+{
+    public class ApplicationDbContext : DbContext
+    {
+        public ApplicationDbContext(DbContextOptions<ApplicationDbContext> options)
+            : base(options)
+        {
+        }
+
+        public DbSet<User> Users { get; set; }
+        public DbSet<Role> Roles { get; set; }
+        public DbSet<Token> Tokens { get; set; }
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+            // Additional configurations can be added here
+        }
+    }
+}
+ ChangePasswordDto.cs
+ using System.ComponentModel.DataAnnotations;
+
+namespace POS_Test_1.DTOs
+{
+    public class ChangePasswordDto
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; }
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string OldPassword { get; set; }
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string NewPassword { get; set; }
+    }
+}
+
+ ForgotPasswordDto.cs
+ using System.ComponentModel.DataAnnotations;
+
+namespace POS_Test_1.DTOs
+{
+    public class ForgotPasswordDto
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; }
+    }
+}
+
+ ResetPasswordDto.cs
+ using System.ComponentModel.DataAnnotations;
+
+namespace POS_Test_1.DTOs
+{
+    public class ResetPasswordDto
+    {
+        [Required]
+        public string Token { get; set; }
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string NewPassword { get; set; }
+    }
+}
+
+ LoginDto.cs
+ using System.ComponentModel.DataAnnotations;
+
+namespace POS_Test_1.DTOs
+{
+    public class LoginDto
+    {
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; }
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; }
+    }
+}
+
+ RegisterDto.cs
+ using System.ComponentModel.DataAnnotations;
+
+namespace POS_Test_1.DTOs
+{
+    public class RegisterDto
+    {
+        [Required]
+        public string UserName { get; set; }
+
+        [Required]
+        [EmailAddress]
+        public string Email { get; set; }
+
+        [Required]
+        [DataType(DataType.Password)]
+        public string Password { get; set; }
+    }
+}
+
+IAccountService.cs
+using System.Threading.Tasks;
+using POS_Test_1.DTOs;
+
+namespace POS_Test_1.Interfaces
+{
+    public interface IAccountService
+    {
+        Task<bool> RegisterUserAsync(RegisterDto registerDto);
+        Task<bool> LoginAsync(LoginDto loginDto);
+        Task<bool> ForgotPasswordAsync(ForgotPasswordDto forgotPasswordDto);
+        Task<bool> ResetPasswordAsync(ResetPasswordDto resetPasswordDto);
+        Task<bool> ChangePasswordAsync(ChangePasswordDto changePasswordDto);
+    }
+}
+
+IUserRepository.cs
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using POS_Test_1.Models;
+
+namespace POS_Test_1.Interfaces
+{
+    public interface IUserRepository
+    {
+        Task<IEnumerable<User>> GetAllUsersAsync();
+        Task<User> GetUserByIdAsync(int id);
+        Task<User> GetUserByEmailAsync(string email);
+        Task<User> GetUserByResetTokenAsync(string resetToken);
+        Task<bool> CreateUserAsync(User user);
+        Task<bool> UpdateUserAsync(User user);
+        Task<bool> DeleteUserAsync(int id);
+        Task<bool> SaveAsync();
+    }
+}
+
+IEmailService.cs
+using System.Threading.Tasks;
+using POS_Test_1.Models;
+
+namespace POS_Test_1.Interfaces
+{
+    public interface IEmailService
+    {
+        Task<bool> SendResetPasswordEmail(User user);
+    }
+}
+
+IRoleRepository.cs
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using POS_Test_1.Models;
+
+namespace POS_Test_1.Interfaces
+{
+    public interface IRoleRepository
+    {
+        Task<IEnumerable<Role>> GetAllRolesAsync();
+        Task<Role> GetRoleByIdAsync(int id);
+        Task<bool> CreateRoleAsync(Role role);
+        Task<bool> UpdateRoleAsync(Role role);
+        Task<bool> DeleteRoleAsync(int id);
+        Task<bool> SaveAsync();
+    }
+}
+
+ITokenRepository.cs
+using System.Threading.Tasks;
+using POS_Test_1.Models;
+
+namespace POS_Test_1.Interfaces
+{
+    public interface ITokenRepository
+    {
+        Task<Token> GetTokenByUserIdAsync(int userId);
+        Task<Token> GetTokenByValueAsync(string tokenValue);
+        Task<bool> CreateTokenAsync(Token token);
+        Task<bool> DeleteTokenAsync(int userId);
+        Task<bool> SaveAsync();
+    }
+}
+token.cs
+using System.ComponentModel.DataAnnotations;
+
+namespace POS_Test_1.Models
+{
+    public class Token
+    {
+        [Key]
+        public int Id { get; set; }
+        public int UserId { get; set; }
+        public string Value { get; set; }
+        public DateTime ExpiryDate { get; set; }
+    }
+}
+User.cs
+using System.ComponentModel.DataAnnotations;
+
+namespace POS_Test_1.Models
+{
+    public class User
+    {
+        [Key]
+        public int Id { get; set; }
+
+        [Required]
+        [StringLength(100)]
+        public string UserName { get; set; }
+
+        [Required]
+        [StringLength(256)]
+        public string Email { get; set; }
+
+        [Required]
+        [StringLength(256)]
+        public string PasswordHash { get; set; }
+
+        [StringLength(256)]
+        public string ResetToken { get; set; } // Add this property
+    }
+}
+ UserRepository.cs
+ using System.Collections.Generic;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using POS_Test_1.Data;
+using POS_Test_1.Interfaces;
+using POS_Test_1.Models;
+
+namespace POS_Test_1.Repositories
+{
+    public class UserRepository : IUserRepository
+    {
+        private readonly ApplicationDbContext _context;
+
+        public UserRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<IEnumerable<User>> GetAllUsersAsync()
+        {
+            return await _context.Users.ToListAsync();
+        }
+
+        public async Task<User> GetUserByIdAsync(int id)
+        {
+            return await _context.Users.FindAsync(id);
+        }
+        public async Task<User> GetUserByResetTokenAsync(string resetToken)
+        {
+            return await _context.Users.FirstOrDefaultAsync(u => u.ResetToken == resetToken);
+        }
+        public async Task<User> GetUserByEmailAsync(string email)
+        {
+            return await _context.Users.FirstOrDefaultAsync(u => u.Email == email);
+        }
+
+        public async Task<bool> CreateUserAsync(User user)
+        {
+            await _context.Users.AddAsync(user);
+            return await SaveAsync();
+        }
+
+        public async Task<bool> UpdateUserAsync(User user)
+        {
+            _context.Entry(user).State = EntityState.Modified;
+            return await SaveAsync();
+        }
+
+        public async Task<bool> DeleteUserAsync(int id)
+        {
+            var user = await _context.Users.FindAsync(id);
+            if (user == null)
+            {
+                return false;
+            }
+            _context.Users.Remove(user);
+            return await SaveAsync();
+        }
+
+        public async Task<bool> SaveAsync()
+        {
+            return await _context.SaveChangesAsync() > 0;
+        }
+    }
+}
+
+ RoleRepository.cs
+ using System.Collections.Generic;
+using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using POS_Test_1.Data;
+using POS_Test_1.Interfaces;
+using POS_Test_1.Models;
+
+namespace POS_Test_1.Repositories
+{
+    public class RoleRepository : IRoleRepository
+    {
+        private readonly ApplicationDbContext _context;
+
+        public RoleRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<IEnumerable<Role>> GetAllRolesAsync()
+        {
+            return await _context.Roles.ToListAsync();
+        }
+
+        public async Task<Role> GetRoleByIdAsync(int id)
+        {
+            return await _context.Roles.FindAsync(id);
+        }
+
+        public async Task<bool> CreateRoleAsync(Role role)
+        {
+            await _context.Roles.AddAsync(role);
+            return await SaveAsync();
+        }
+
+        public async Task<bool> UpdateRoleAsync(Role role)
+        {
+            _context.Entry(role).State = EntityState.Modified;
+            return await SaveAsync();
+        }
+
+        public async Task<bool> DeleteRoleAsync(int id)
+        {
+            var role = await _context.Roles.FindAsync(id);
+            if (role == null)
+            {
+                return false;
+            }
+            _context.Roles.Remove(role);
+            return await SaveAsync();
+        }
+
+        public async Task<bool> SaveAsync()
+        {
+            return await _context.SaveChangesAsync() > 0;
+        }
+    }
+}
+
+ TokenRepository.cs
+ using System.Threading.Tasks;
+using Microsoft.EntityFrameworkCore;
+using POS_Test_1.Data;
+using POS_Test_1.Interfaces;
+using POS_Test_1.Models;
+
+namespace POS_Test_1.Repositories
+{
+    public class TokenRepository : ITokenRepository
+    {
+        private readonly ApplicationDbContext _context;
+
+        public TokenRepository(ApplicationDbContext context)
+        {
+            _context = context;
+        }
+
+        public async Task<Token> GetTokenByUserIdAsync(int userId)
+        {
+            return await _context.Tokens.FirstOrDefaultAsync(t => t.UserId == userId);
+        }
+
+        public async Task<Token> GetTokenByValueAsync(string tokenValue)
+        {
+            return await _context.Tokens.FirstOrDefaultAsync(t => t.Value == tokenValue);
+        }
+
+        public async Task<bool> CreateTokenAsync(Token token)
+        {
+            await _context.Tokens.AddAsync(token);
+            return await SaveAsync();
+        }
+
+        public async Task<bool> DeleteTokenAsync(int userId)
+        {
+            var token = await _context.Tokens.FirstOrDefaultAsync(t => t.UserId == userId);
+            if (token == null)
+            {
+                return false;
+            }
+            _context.Tokens.Remove(token);
+            return await SaveAsync();
+        }
+
+        public async Task<bool> SaveAsync()
+        {
+            return await _context.SaveChangesAsync() > 0;
+        }
+    }
+}
+
+ AccountService.cs
+ using System.Threading.Tasks;
+using POS_Test_1.Interfaces;
+using POS_Test_1.DTOs;
+using POS_Test_1.Models;
+using POS_Test_1.Helpers;
+using Microsoft.AspNetCore.Identity;
+using POS_Test_1.DTOs;
+namespace POS_Test_1.Services
+{
+    public class AccountService : IAccountService
+    {
+        private readonly IUserRepository _userRepository;
+        private readonly ITokenRepository _tokenRepository;
+        private readonly IEmailService _emailService;
+        private readonly PasswordHasherService _passwordHasher;
+
+        public AccountService(
+            IUserRepository userRepository,
+            ITokenRepository tokenRepository,
+            IEmailService emailService,
+            PasswordHasherService passwordHasher)
+        {
+            _userRepository = userRepository;
+            _tokenRepository = tokenRepository;
+            _emailService = emailService;
+            _passwordHasher = passwordHasher;
+        }
+
+        public async Task<bool> RegisterUserAsync(RegisterDto registerDto)
+        {
+            // Implement registration logic
+            var user = new User
+            {
+                UserName = registerDto.UserName,
+                Email = registerDto.Email,
+                PasswordHash = _passwordHasher.HashPassword(registerDto.Password)
+            };
+
+            return await _userRepository.CreateUserAsync(user);
+        }
+
+        public async Task<bool> LoginAsync(LoginDto loginDto)
+        {
+            // Implement login logic
+            var user = await _userRepository.GetUserByEmailAsync(loginDto.Email);
+            if (user == null || !_passwordHasher.VerifyPassword(loginDto.Password, user.PasswordHash))
+            {
+                return false;
+            }
+
+            // Generate token or handle login success
+            return true;
+        }
+
+        public async Task<bool> ForgotPasswordAsync(ForgotPasswordDto forgotPasswordDto)
+        {
+            // Implement forgot password logic
+            var user = await _userRepository.GetUserByEmailAsync(forgotPasswordDto.Email);
+            if (user == null)
+            {
+                return false;
+            }
+
+            // Send email with reset link
+            return await _emailService.SendResetPasswordEmail(user);
+        }
+
+        public async Task<bool> ResetPasswordAsync(ResetPasswordDto resetPasswordDto)
+        {
+            // Implement reset password logic
+            var user = await _userRepository.GetUserByResetTokenAsync(resetPasswordDto.Token);
+            if (user == null)
+            {
+                return false;
+            }
+
+            user.PasswordHash = _passwordHasher.HashPassword(resetPasswordDto.NewPassword);
+            return await _userRepository.UpdateUserAsync(user);
+        }
+
+        public async Task<bool> ChangePasswordAsync(ChangePasswordDto changePasswordDto)
+        {
+            // Implement change password logic
+            var user = await _userRepository.GetUserByEmailAsync(changePasswordDto.Email);
+            if (user == null || !_passwordHasher.VerifyPassword(changePasswordDto.OldPassword, user.PasswordHash))
+            {
+                return false;
+            }
+
+            user.PasswordHash = _passwordHasher.HashPassword(changePasswordDto.NewPassword);
+            return await _userRepository.UpdateUserAsync(user);
+        }
+    }
+}
+ EmailService.cs
+ using System.Net.Mail;
+using System.Threading.Tasks;
+using POS_Test_1.Interfaces;
+using POS_Test_1.Models;
+
+namespace POS_Test_1.Services
+{
+    public class EmailService : IEmailService
+    {
+        public async Task<bool> SendResetPasswordEmail(User user)
+        {
+            // Implement email sending logic
+            // Example:
+            var mailMessage = new MailMessage
+            {
+                From = new MailAddress("your-email@example.com"),
+                Subject = "Reset Your Password",
+                Body = $"Click this link to reset your password: http://example.com/reset?token={user.ResetToken}",
+                IsBodyHtml = true
+            };
+            mailMessage.To.Add(user.Email);
+
+            using (var smtpClient = new SmtpClient("smtp.example.com"))
+            {
+                try
+                {
+                    await smtpClient.SendMailAsync(mailMessage);
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            }
+        }
+    }
+}
+ PasswordHasherService.cs
+ using System;
+using System.Security.Cryptography;
+using System.Text;
+
+namespace POS_Test_1.Helpers
+{
+    public class PasswordHasherService
+    {
+        public string HashPassword(string password)
+        {
+            using (var sha256 = SHA256.Create())
+            {
+                var hashedBytes = sha256.ComputeHash(Encoding.UTF8.GetBytes(password));
+                return Convert.ToBase64String(hashedBytes);
+            }
+        }
+
+        public bool VerifyPassword(string password, string hashedPassword)
+        {
+            var hashedInputPassword = HashPassword(password);
+            return hashedInputPassword == hashedPassword;
+        }
+    }
+}
